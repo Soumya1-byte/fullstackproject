@@ -1,6 +1,13 @@
 import { createContext, useEffect, useMemo, useState } from 'react';
 
 export const AuthContext = createContext(null);
+const MOCK_USERS_KEY = 'mock_users';
+const DEFAULT_ADMIN = {
+  name: 'Demo Admin',
+  email: 'admin@demo.com',
+  password: 'admin123',
+  role: 'admin'
+};
 
 function normalizeRole(value) {
   const role = value?.toLowerCase();
@@ -8,6 +15,32 @@ function normalizeRole(value) {
     return role;
   }
   return null;
+}
+
+function readMockUsers() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(MOCK_USERS_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeMockUsers(users) {
+  localStorage.setItem(MOCK_USERS_KEY, JSON.stringify(users));
+}
+
+function ensureDefaultUsers() {
+  const existing = readMockUsers();
+  const hasAdmin = existing.some((entry) => entry?.email?.toLowerCase() === DEFAULT_ADMIN.email);
+  if (hasAdmin) return existing;
+  const updated = [DEFAULT_ADMIN, ...existing];
+  writeMockUsers(updated);
+  return updated;
+}
+
+function resolveRoleFromEmail(email) {
+  return email.toLowerCase().includes('admin') ? 'admin' : 'student';
 }
 
 export function AuthProvider({ children }) {
@@ -19,6 +52,10 @@ export function AuthProvider({ children }) {
   });
   const [loading, setLoading] = useState(false);
   const [bootstrapping] = useState(false);
+
+  useEffect(() => {
+    ensureDefaultUsers();
+  }, []);
 
   useEffect(() => {
     if (!role) {
@@ -43,9 +80,20 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       const email = payload?.email?.trim() || '';
-      const selectedRole = email.toLowerCase().includes('admin') ? 'admin' : 'student';
+      const password = payload?.password?.trim() || '';
+      if (!email || !password) {
+        throw new Error('Email and password are required.');
+      }
+
+      const users = ensureDefaultUsers();
+      const existing = users.find((entry) => entry.email.toLowerCase() === email.toLowerCase());
+      if (existing && existing.password !== password) {
+        throw new Error('Invalid credentials.');
+      }
+
+      const selectedRole = normalizeRole(existing?.role) || resolveRoleFromEmail(email);
       const mockUser = {
-        name: payload?.name?.trim() || (selectedRole === 'admin' ? 'Admin User' : 'Student User'),
+        name: existing?.name || payload?.name?.trim() || (selectedRole === 'admin' ? 'Admin User' : 'Student User'),
         email,
         role: selectedRole
       };
@@ -60,7 +108,32 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (payload) => {
-    return login(payload);
+    setLoading(true);
+    try {
+      const name = payload?.name?.trim() || 'New User';
+      const email = payload?.email?.trim() || '';
+      const password = payload?.password?.trim() || '';
+      if (!email || !password) {
+        throw new Error('Email and password are required.');
+      }
+
+      const users = ensureDefaultUsers();
+      if (users.some((entry) => entry.email.toLowerCase() === email.toLowerCase())) {
+        throw new Error('User already exists. Please sign in.');
+      }
+
+      const selectedRole = normalizeRole(payload?.role) || resolveRoleFromEmail(email);
+      const nextUsers = [...users, { name, email, password, role: selectedRole }];
+      writeMockUsers(nextUsers);
+
+      const mockUser = { name, email, role: selectedRole };
+      localStorage.setItem('role', selectedRole);
+      setRole(selectedRole);
+      setUser(mockUser);
+      return { user: mockUser };
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = async () => {
