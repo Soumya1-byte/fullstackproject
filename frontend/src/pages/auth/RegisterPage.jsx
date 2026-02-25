@@ -21,7 +21,11 @@ export default function RegisterPage() {
       const apiError = error.response?.data?.error;
       const details = apiError?.details?.fieldErrors;
       const firstFieldError = details ? Object.values(details).flat().find(Boolean) : null;
-      pushToast(firstFieldError || apiError?.message || 'Registration failed', 'error');
+      const message =
+        firstFieldError ||
+        apiError?.message ||
+        (error.request ? 'Cannot reach server. Check backend is running and API URL is correct.' : 'Registration failed');
+      pushToast(message, 'error');
     }
   };
 

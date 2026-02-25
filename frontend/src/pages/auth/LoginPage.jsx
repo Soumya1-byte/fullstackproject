@@ -22,7 +22,9 @@ export default function LoginPage() {
       pushToast('Login successful', 'success');
       navigate(data.user.role === 'ADMIN' ? '/admin' : '/student');
     } catch (error) {
-      const message = error.response?.data?.error?.message || 'Login failed';
+      const message =
+        error.response?.data?.error?.message ||
+        (error.request ? 'Cannot reach server. Check backend is running and API URL is correct.' : 'Login failed');
       setErrorMessage(message);
       pushToast(message, 'error');
     }
