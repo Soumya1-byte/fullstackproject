@@ -19,6 +19,7 @@ import InsightsPage from '../../pages/student/InsightsPage';
 import ProfilePage from '../../pages/common/ProfilePage';
 import NotFoundPage from '../../pages/common/NotFoundPage';
 import { useAuth } from '../../hooks/useAuth';
+import AppBootLoader from '../../components/system/AppBootLoader';
 
 function AnimatedOutlet({ children }) {
   return (
@@ -29,7 +30,10 @@ function AnimatedOutlet({ children }) {
 }
 
 function HomeRedirect() {
-  const { role, isAuthenticated } = useAuth();
+  const { role, isAuthenticated, bootstrapping } = useAuth();
+  if (bootstrapping) {
+    return <AppBootLoader />;
+  }
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }

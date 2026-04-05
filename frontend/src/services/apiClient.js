@@ -28,6 +28,10 @@ export function setAccessToken(token) {
   }
 }
 
+export function clearAccessToken() {
+  localStorage.removeItem('token');
+}
+
 export function getAccessToken() {
   return localStorage.getItem('token');
 }

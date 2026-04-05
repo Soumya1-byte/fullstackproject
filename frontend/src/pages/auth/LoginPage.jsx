@@ -20,7 +20,7 @@ export default function LoginPage() {
       setErrorMessage('');
       const data = await login(values);
       pushToast('Login successful', 'success');
-      navigate(data.user.role === 'admin' ? '/admin/dashboard' : '/student/dashboard');
+      navigate(data.user.role?.toLowerCase() === 'admin' ? '/admin/dashboard' : '/student/dashboard');
     } catch (error) {
       const message = error?.message || 'Login failed';
       setErrorMessage(message);

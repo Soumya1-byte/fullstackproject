@@ -1,13 +1,10 @@
 import { createContext, useEffect, useMemo, useState } from 'react';
+import { authService } from '../services/authService';
+import { clearAccessToken, setAccessToken } from '../services/apiClient';
 
 export const AuthContext = createContext(null);
-const MOCK_USERS_KEY = 'mock_users';
-const DEFAULT_ADMIN = {
-  name: 'Demo Admin',
-  email: 'admin@demo.com',
-  password: 'admin123',
-  role: 'admin'
-};
+const ROLE_KEY = 'role';
+const USER_KEY = 'user';
 
 function normalizeRole(value) {
   const role = value?.toLowerCase();
@@ -17,91 +14,100 @@ function normalizeRole(value) {
   return null;
 }
 
-function readMockUsers() {
+function readJson(key) {
   try {
-    const parsed = JSON.parse(localStorage.getItem(MOCK_USERS_KEY) || '[]');
-    return Array.isArray(parsed) ? parsed : [];
+    return JSON.parse(localStorage.getItem(key) || 'null');
   } catch {
-    return [];
+    return null;
   }
 }
 
-function writeMockUsers(users) {
-  localStorage.setItem(MOCK_USERS_KEY, JSON.stringify(users));
+function writeJson(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
 }
 
-function ensureDefaultUsers() {
-  const existing = readMockUsers();
-  const hasAdmin = existing.some((entry) => entry?.email?.toLowerCase() === DEFAULT_ADMIN.email);
-  if (hasAdmin) return existing;
-  const updated = [DEFAULT_ADMIN, ...existing];
-  writeMockUsers(updated);
-  return updated;
+function clearSessionStorage() {
+  localStorage.removeItem(ROLE_KEY);
+  localStorage.removeItem(USER_KEY);
 }
 
-function resolveRoleFromEmail(email) {
-  return email.toLowerCase().includes('admin') ? 'admin' : 'student';
+function normalizeUser(user) {
+  if (!user) return null;
+  return {
+    ...user,
+    _id: user._id || user.id || null,
+    role: normalizeRole(user.role)
+  };
 }
 
 export function AuthProvider({ children }) {
-  const [role, setRole] = useState(() => normalizeRole(localStorage.getItem('role')));
-  const [user, setUser] = useState(() => {
-    const savedUser = JSON.parse(localStorage.getItem('user') || 'null');
-    if (!savedUser) return null;
-    return { ...savedUser, role: normalizeRole(savedUser.role) || normalizeRole(localStorage.getItem('role')) };
-  });
+  const [role, setRole] = useState(() => normalizeRole(localStorage.getItem(ROLE_KEY)));
+  const [user, setUser] = useState(() => normalizeUser(readJson(USER_KEY)));
   const [loading, setLoading] = useState(false);
-  const [bootstrapping] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(true);
 
   useEffect(() => {
-    ensureDefaultUsers();
+    let active = true;
+
+    const restoreSession = async () => {
+      try {
+        const profile = normalizeUser(await authService.me());
+        if (!active || !profile) return;
+        setUser(profile);
+        setRole(profile.role);
+        localStorage.setItem(ROLE_KEY, profile.role);
+        writeJson(USER_KEY, profile);
+      } catch {
+        if (!active) return;
+        clearAccessToken();
+        clearSessionStorage();
+        setUser(null);
+        setRole(null);
+      } finally {
+        if (active) {
+          setBootstrapping(false);
+        }
+      }
+    };
+
+    restoreSession();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
+    if (bootstrapping) return;
+
     if (!role) {
-      setUser(null);
-      localStorage.removeItem('role');
-      localStorage.removeItem('user');
+      clearSessionStorage();
       return;
     }
-    localStorage.setItem('role', role);
-    setUser((prev) => (prev ? { ...prev, role } : prev));
-  }, [role]);
+    localStorage.setItem(ROLE_KEY, role);
+  }, [role, bootstrapping]);
 
   useEffect(() => {
+    if (bootstrapping) return;
+
     if (user) {
-      localStorage.setItem('user', JSON.stringify(user));
+      writeJson(USER_KEY, user);
     } else {
-      localStorage.removeItem('user');
+      localStorage.removeItem(USER_KEY);
     }
-  }, [user]);
+  }, [user, bootstrapping]);
 
   const login = async (payload) => {
     setLoading(true);
     try {
-      const email = payload?.email?.trim() || '';
-      const password = payload?.password?.trim() || '';
-      if (!email || !password) {
-        throw new Error('Email and password are required.');
-      }
-
-      const users = ensureDefaultUsers();
-      const existing = users.find((entry) => entry.email.toLowerCase() === email.toLowerCase());
-      if (existing && existing.password !== password) {
-        throw new Error('Invalid credentials.');
-      }
-
-      const selectedRole = normalizeRole(existing?.role) || resolveRoleFromEmail(email);
-      const mockUser = {
-        name: existing?.name || payload?.name?.trim() || (selectedRole === 'admin' ? 'Admin User' : 'Student User'),
-        email,
-        role: selectedRole
-      };
-
-      localStorage.setItem('role', selectedRole);
-      setRole(selectedRole);
-      setUser(mockUser);
-      return { user: mockUser };
+      const auth = await authService.login(payload);
+      const normalizedUser = normalizeUser(auth?.user);
+      setAccessToken(auth?.token || null);
+      setRole(normalizedUser?.role || null);
+      setUser(normalizedUser);
+      return { user: normalizedUser };
+    } catch (error) {
+      throw new Error(error.response?.data?.error?.message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -110,41 +116,38 @@ export function AuthProvider({ children }) {
   const register = async (payload) => {
     setLoading(true);
     try {
-      const name = payload?.name?.trim() || 'New User';
-      const email = payload?.email?.trim() || '';
-      const password = payload?.password?.trim() || '';
-      if (!email || !password) {
-        throw new Error('Email and password are required.');
-      }
-
-      const users = ensureDefaultUsers();
-      if (users.some((entry) => entry.email.toLowerCase() === email.toLowerCase())) {
-        throw new Error('User already exists. Please sign in.');
-      }
-
-      const selectedRole = normalizeRole(payload?.role) || resolveRoleFromEmail(email);
-      const nextUsers = [...users, { name, email, password, role: selectedRole }];
-      writeMockUsers(nextUsers);
-
-      const mockUser = { name, email, role: selectedRole };
-      localStorage.setItem('role', selectedRole);
-      setRole(selectedRole);
-      setUser(mockUser);
-      return { user: mockUser };
+      const auth = await authService.register(payload);
+      const normalizedUser = normalizeUser(auth?.user);
+      setAccessToken(auth?.token || null);
+      setRole(normalizedUser?.role || null);
+      setUser(normalizedUser);
+      return { user: normalizedUser };
+    } catch (error) {
+      throw new Error(error.response?.data?.error?.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
   };
 
   const logout = async () => {
-    localStorage.clear();
+    try {
+      await authService.logout();
+    } catch {
+      // Clear local session state even if the server request fails.
+    }
+    clearAccessToken();
+    clearSessionStorage();
     setRole(null);
     setUser(null);
     window.location.assign('/');
   };
 
   const updateUser = (patch) => {
-    setUser((prev) => (prev ? { ...prev, ...patch } : prev));
+    const nextRole = normalizeRole(patch?.role);
+    if (nextRole) {
+      setRole(nextRole);
+    }
+    setUser((prev) => (prev ? normalizeUser({ ...prev, ...patch }) : prev));
   };
 
   const value = useMemo(

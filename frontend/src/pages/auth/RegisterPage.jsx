@@ -3,11 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-import Select from '../../components/ui/Select';
 import { useToast } from '../../hooks/useToast';
 
 export default function RegisterPage() {
-  const { register, handleSubmit } = useForm({ defaultValues: { role: 'student' } });
+  const { register, handleSubmit } = useForm({ defaultValues: { role: 'STUDENT' } });
   const { register: registerUser, loading } = useAuth();
   const { pushToast } = useToast();
   const navigate = useNavigate();
@@ -16,7 +15,7 @@ export default function RegisterPage() {
     try {
       const data = await registerUser(values);
       pushToast('Registration successful', 'success');
-      navigate(data.user.role === 'admin' ? '/admin/dashboard' : '/student/dashboard');
+      navigate(data.user.role?.toLowerCase() === 'admin' ? '/admin/dashboard' : '/student/dashboard');
     } catch (error) {
       const message = error?.message || 'Registration failed';
       pushToast(message, 'error');
@@ -26,15 +25,12 @@ export default function RegisterPage() {
   return (
     <div>
       <h1 className="mb-2 text-3xl font-semibold tracking-tight text-[var(--color-text-primary)]">Create account</h1>
-      <p className="mb-5 text-sm text-[var(--color-text-secondary)]">Start collecting better feedback</p>
+      <p className="mb-5 text-sm text-[var(--color-text-secondary)]">Student accounts can register here. The admin account is managed separately.</p>
       <form className="space-y-3" onSubmit={handleSubmit(onSubmit)}>
         <Input placeholder="Name" {...register('name')} />
         <Input placeholder="Email" {...register('email')} />
         <Input placeholder="Password" type="password" {...register('password')} />
-        <Select {...register('role')}>
-          <option value="student">Student</option>
-          <option value="admin">Admin</option>
-        </Select>
+        <input type="hidden" {...register('role')} value="STUDENT" />
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? 'Creating...' : 'Create account'}
         </Button>
