@@ -1,5 +1,5 @@
 server:
-  port: 4000
+  port: ${PORT:4000}
 
 spring:
   data:
@@ -10,7 +10,7 @@ app:
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
   auth:
     admin-login-email: ${ADMIN_LOGIN_EMAIL:soumya.mishra.7812@gmail.com}
-    admin-login-password: ${ADMIN_LOGIN_PASSWORD:123123}
+    admin-login-password: ${ADMIN_LOGIN_PASSWORD:321123}
     secure-cookies: ${SECURE_COOKIES:false}
   jwt:
     access-secret: ${JWT_SECRET:development_secret}
