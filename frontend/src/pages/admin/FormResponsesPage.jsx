@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import SectionCard from '../../components/ui/SectionCard';
 import EmptyState from '../../components/ui/EmptyState';
 import Select from '../../components/ui/Select';
@@ -13,6 +14,7 @@ function renderValue(value) {
 }
 
 export default function FormResponsesPage() {
+  const { dashboardSearchQuery = '' } = useOutletContext() || {};
   const [forms, setForms] = useState([]);
   const [formId, setFormId] = useState('');
   const [responses, setResponses] = useState([]);
@@ -44,6 +46,25 @@ export default function FormResponsesPage() {
     return (responses.reduce((sum, item) => sum + (item.answers?.length || 0), 0) / responses.length).toFixed(1);
   }, [responses]);
 
+  const normalizedQuery = dashboardSearchQuery.trim().toLowerCase();
+
+  const filteredForms = useMemo(() => {
+    if (!normalizedQuery) return forms;
+    return forms.filter((form) => String(form.title || '').toLowerCase().includes(normalizedQuery));
+  }, [forms, normalizedQuery]);
+
+  useEffect(() => {
+    if (!filteredForms.length) {
+      setFormId('');
+      setResponses([]);
+      return;
+    }
+
+    if (!filteredForms.some((form) => form._id === formId)) {
+      setFormId(filteredForms[0]._id);
+    }
+  }, [filteredForms, formId]);
+
   return (
     <div className="space-y-6">
       <header className="space-y-2">
@@ -54,8 +75,8 @@ export default function FormResponsesPage() {
 
       <SectionCard title="Filter Responses" subtitle="Choose form to inspect response details">
         <Select value={formId} onChange={(e) => setFormId(e.target.value)}>
-          {!forms.length && <option value="">No forms available</option>}
-          {forms.map((form) => (
+          {!filteredForms.length && <option value="">{normalizedQuery ? 'No matching forms' : 'No forms available'}</option>}
+          {filteredForms.map((form) => (
             <option key={form._id} value={form._id}>
               {form.title}
             </option>

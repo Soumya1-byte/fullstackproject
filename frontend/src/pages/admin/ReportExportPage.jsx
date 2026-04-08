@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import { formService } from '../../services/formService';
@@ -6,6 +7,7 @@ import apiClient from '../../services/apiClient';
 import { useToast } from '../../hooks/useToast';
 
 export default function ReportExportPage() {
+  const { dashboardSearchQuery = '' } = useOutletContext() || {};
   const [forms, setForms] = useState([]);
   const [selectedFormId, setSelectedFormId] = useState('');
   const { pushToast } = useToast();
@@ -16,6 +18,26 @@ export default function ReportExportPage() {
       if (data?.length) setSelectedFormId(data[0]._id);
     });
   }, []);
+
+  const normalizedQuery = dashboardSearchQuery.trim().toLowerCase();
+
+  const filteredForms = useMemo(() => {
+    if (!normalizedQuery) return forms;
+    return forms.filter((form) =>
+      [form.title, form.status].some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
+    );
+  }, [forms, normalizedQuery]);
+
+  useEffect(() => {
+    if (!filteredForms.length) {
+      setSelectedFormId('');
+      return;
+    }
+
+    if (!filteredForms.some((form) => form._id === selectedFormId)) {
+      setSelectedFormId(filteredForms[0]._id);
+    }
+  }, [filteredForms, selectedFormId]);
 
   const fileBase = useMemo(() => 'feedback-report', []);
 
@@ -59,8 +81,8 @@ export default function ReportExportPage() {
           value={selectedFormId}
           onChange={(e) => setSelectedFormId(e.target.value)}
         >
-          {!forms.length && <option value="">No forms available</option>}
-          {forms.map((form) => (
+          {!filteredForms.length && <option value="">{normalizedQuery ? 'No matching forms' : 'No forms available'}</option>}
+          {filteredForms.map((form) => (
             <option key={form._id} value={form._id}>
               {form.title}
             </option>

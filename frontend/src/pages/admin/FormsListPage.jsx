@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Skeleton from '../../components/ui/Skeleton';
@@ -8,6 +9,7 @@ import Button from '../../components/ui/Button';
 import { useToast } from '../../hooks/useToast';
 
 export default function FormsListPage() {
+  const { dashboardSearchQuery = '' } = useOutletContext() || {};
   const [forms, setForms] = useState([]);
   const [summaries, setSummaries] = useState({});
   const [actionLoadingId, setActionLoadingId] = useState('');
@@ -35,6 +37,15 @@ export default function FormsListPage() {
   useEffect(() => {
     loadForms().finally(() => setLoading(false));
   }, []);
+
+  const normalizedQuery = dashboardSearchQuery.trim().toLowerCase();
+
+  const filteredForms = useMemo(() => {
+    if (!normalizedQuery) return forms;
+    return forms.filter((form) =>
+      [form.title, form.status].some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
+    );
+  }, [forms, normalizedQuery]);
 
   const handlePublish = async (formId) => {
     setActionLoadingId(formId);
@@ -66,13 +77,13 @@ export default function FormsListPage() {
     <Card title="Feedback Forms">
       <div className="space-y-2">
         {loading && [1, 2, 3].map((item) => <Skeleton key={item} className="h-16" />)}
-        {!loading && forms.length === 0 && (
+        {!loading && filteredForms.length === 0 && (
           <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-            No forms yet. Start from Form Builder to create your first feedback workflow.
+            {normalizedQuery ? 'No forms match the current search.' : 'No forms yet. Start from Form Builder to create your first feedback workflow.'}
           </div>
         )}
         {!loading &&
-          forms.map((form) => (
+          filteredForms.map((form) => (
             <div key={form._id} className="flex flex-col gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="font-semibold">{form.title}</p>

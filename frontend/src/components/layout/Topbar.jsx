@@ -5,7 +5,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../hooks/useAuth';
 import ProfileMenu from './ProfileMenu';
 
-export default function Topbar({ onMenuClick }) {
+export default function Topbar({ onMenuClick, searchQuery = '', onSearchChange, showSearch = false }) {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
 
@@ -28,13 +28,19 @@ export default function Topbar({ onMenuClick }) {
         </div>
 
         <div className="flex flex-1 items-center justify-end gap-2">
-          <div className="hidden w-full max-w-md lg:block">
+          <div className={`w-full max-w-md ${showSearch ? 'hidden lg:block' : 'hidden'}`}>
             <label className="sr-only" htmlFor="dashboard-search">
               Search
             </label>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-[var(--text-muted)]" />
-              <Input id="dashboard-search" placeholder="Search courses, forms, instructors..." className="pl-10" />
+              <Input
+                id="dashboard-search"
+                placeholder="Search courses, forms, students..."
+                value={searchQuery}
+                onChange={(event) => onSearchChange?.(event.target.value)}
+                className="pl-10"
+              />
             </div>
           </div>
           <div className="flex items-center gap-2 rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] px-3 py-2">
