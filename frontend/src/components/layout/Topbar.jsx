@@ -5,7 +5,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../hooks/useAuth';
 import ProfileMenu from './ProfileMenu';
 
-export default function Topbar({ onMenuClick, searchQuery = '', onSearchChange, showSearch = false }) {
+export default function Topbar({ onMenuClick, searchQuery = '', onSearchChange, showSearch = false, searchPlaceholder = 'Search this workspace...' }) {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
 
@@ -36,7 +36,7 @@ export default function Topbar({ onMenuClick, searchQuery = '', onSearchChange, 
               <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-[var(--text-muted)]" />
               <Input
                 id="dashboard-search"
-                placeholder="Search courses, forms, students..."
+                placeholder={searchPlaceholder}
                 value={searchQuery}
                 onChange={(event) => onSearchChange?.(event.target.value)}
                 className="pl-10"

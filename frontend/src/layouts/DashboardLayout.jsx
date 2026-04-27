@@ -34,6 +34,9 @@ export default function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const isAdminRoute = role === 'admin' && location.pathname.startsWith('/admin');
+  const searchPlaceholder = location.pathname.startsWith('/admin/myadmins')
+    ? 'Search admin requests by student, email, status, or notes...'
+    : 'Search courses, forms, students, and reports...';
 
   useEffect(() => {
     setSearchQuery('');
@@ -57,6 +60,7 @@ export default function DashboardLayout() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           showSearch={isAdminRoute}
+          searchPlaceholder={searchPlaceholder}
         />
 
         <nav className="glass flex gap-2 overflow-x-auto rounded-2xl border border-[var(--line-soft)] bg-[color-mix(in_oklab,var(--surface-card)_88%,transparent)] p-2 lg:hidden">

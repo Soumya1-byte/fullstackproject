@@ -47,7 +47,14 @@ export default function AdminRequestsPage() {
   const filteredRequests = useMemo(() => {
     if (!normalizedQuery) return requests;
     return requests.filter((request) =>
-      [request.name, request.email, request.adminRequestStatus, request.role]
+      [
+        request.name,
+        request.email,
+        request.adminRequestStatus,
+        request.role,
+        request.adminRequestMessage,
+        request.adminRequestDecisionNote
+      ]
         .some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
     );
   }, [requests, normalizedQuery]);
