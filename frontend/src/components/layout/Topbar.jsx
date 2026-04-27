@@ -27,8 +27,8 @@ export default function Topbar({ onMenuClick, searchQuery = '', onSearchChange, 
           </div>
         </div>
 
-        <div className="flex flex-1 items-center justify-end gap-2">
-          <div className={`w-full max-w-md ${showSearch ? 'hidden lg:block' : 'hidden'}`}>
+        <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
+          <div className={`order-last w-full md:order-none md:max-w-md ${showSearch ? 'block' : 'hidden'}`}>
             <label className="sr-only" htmlFor="dashboard-search">
               Search
             </label>
