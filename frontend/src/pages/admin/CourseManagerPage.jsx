@@ -51,7 +51,7 @@ export default function CourseManagerPage() {
 
   const normalizedQuery = dashboardSearchQuery.trim().toLowerCase();
 
-  const filteredCourses = useMemo(() => {
+  const matchingCourses = useMemo(() => {
     if (!normalizedQuery) return courses;
     return courses.filter((course) =>
       [course.code, course.title, course.semester, course.department].some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
@@ -64,6 +64,9 @@ export default function CourseManagerPage() {
       [student.name, student.email].some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
     );
   }, [students, normalizedQuery]);
+
+  const filteredCourses = normalizedQuery && !matchingCourses.length && filteredStudents.length ? courses : matchingCourses;
+  const hasSearchMatches = courses.length > 0 && (filteredCourses.length || filteredStudents.length);
 
   useEffect(() => {
     if (!filteredCourses.length) {
@@ -138,13 +141,13 @@ export default function CourseManagerPage() {
       </SectionCard>
 
       <SectionCard title="Assign Students" subtitle="Students can submit only forms from courses they are enrolled in">
-        {!filteredCourses.length ? (
+        {!hasSearchMatches ? (
           <EmptyState
             icon={BookOpenCheck}
-            title={normalizedQuery ? 'No matching courses' : 'No courses available'}
+            title={normalizedQuery ? 'No matching courses or students' : 'No courses available'}
             description={
               normalizedQuery
-                ? 'Try a different course code, title, semester, or department.'
+                ? 'Try a different course code, title, semester, department, student name, or student email.'
                 : 'Create a course first, then assign students and publish forms.'
             }
           />

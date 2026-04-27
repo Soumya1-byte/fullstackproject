@@ -129,7 +129,7 @@ export default function FormBuilderPage() {
               ))}
             </Select>
           </div>
-          <FormBuilderCanvas questions={questions} setQuestions={setQuestions} />
+          <FormBuilderCanvas questions={questions} setQuestions={setQuestions} searchQuery={dashboardSearchQuery} />
           <Button className="mt-4" onClick={onSave} type="button">
             Save Draft
           </Button>
