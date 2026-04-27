@@ -8,20 +8,29 @@ import Textarea from '../../components/ui/Textarea';
 import { useToast } from '../../hooks/useToast';
 import { userService } from '../../services/userService';
 
+function normalizeStatus(value) {
+  const normalized = String(value || '').trim().toUpperCase();
+  if (normalized === 'APPROVED' || normalized === 'DENIED' || normalized === 'PENDING') {
+    return normalized;
+  }
+  return 'NONE';
+}
+
 function formatDate(value) {
   if (!value) return 'Not available';
   return new Date(value).toLocaleString();
 }
 
 function StatusBadge({ status }) {
+  const normalizedStatus = normalizeStatus(status);
   const tone =
-    status === 'APPROVED'
+    normalizedStatus === 'APPROVED'
       ? 'border-emerald-300/40 bg-emerald-500/10 text-emerald-700'
-      : status === 'DENIED'
+      : normalizedStatus === 'DENIED'
         ? 'border-rose-300/40 bg-rose-500/10 text-rose-700'
         : 'border-amber-300/40 bg-amber-500/10 text-amber-700';
 
-  return <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${tone}`}>{status}</span>;
+  return <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${tone}`}>{normalizedStatus}</span>;
 }
 
 export default function AdminRequestsPage() {
@@ -50,7 +59,7 @@ export default function AdminRequestsPage() {
       [
         request.name,
         request.email,
-        request.adminRequestStatus,
+        normalizeStatus(request.adminRequestStatus),
         request.role,
         request.adminRequestMessage,
         request.adminRequestDecisionNote
@@ -59,7 +68,7 @@ export default function AdminRequestsPage() {
     );
   }, [requests, normalizedQuery]);
 
-  const pendingCount = useMemo(() => requests.filter((request) => request.adminRequestStatus === 'PENDING').length, [requests]);
+  const pendingCount = useMemo(() => requests.filter((request) => normalizeStatus(request.adminRequestStatus) === 'PENDING').length, [requests]);
 
   const onReview = async (userId, decision) => {
     setProcessingId(userId);
@@ -107,16 +116,18 @@ export default function AdminRequestsPage() {
         ) : (
           <div className="space-y-4">
             {filteredRequests.map((request) => {
-              const isPending = request.adminRequestStatus === 'PENDING';
-              const isBusy = processingId === request._id;
+              const requestId = request._id || request.id;
+              const normalizedStatus = normalizeStatus(request.adminRequestStatus);
+              const isPending = normalizedStatus === 'PENDING';
+              const isBusy = processingId === requestId;
 
               return (
-                <div key={request._id} className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-elevated)] p-4">
+                <div key={requestId} className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-elevated)] p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-base font-semibold text-[var(--text-primary)]">{request.name}</p>
-                        <StatusBadge status={request.adminRequestStatus} />
+                        <StatusBadge status={normalizedStatus} />
                       </div>
                       <p className="text-sm text-[var(--text-secondary)]">{request.email}</p>
                       <p className="text-xs text-[var(--text-muted)]">Requested on {formatDate(request.adminRequestRequestedAt)}</p>
@@ -125,6 +136,19 @@ export default function AdminRequestsPage() {
                       Current role: <span className="font-semibold text-[var(--text-primary)]">{request.role}</span>
                     </div>
                   </div>
+
+                  {isPending ? (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button type="button" onClick={() => onReview(requestId, 'APPROVED')} disabled={isBusy || !requestId}>
+                        <ShieldCheck className="h-4 w-4" />
+                        {isBusy ? 'Saving...' : 'Approve'}
+                      </Button>
+                      <Button type="button" variant="secondary" onClick={() => onReview(requestId, 'DENIED')} disabled={isBusy || !requestId}>
+                        <ShieldX className="h-4 w-4" />
+                        {isBusy ? 'Saving...' : 'Deny'}
+                      </Button>
+                    </div>
+                  ) : null}
 
                   <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
                     <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-4">
@@ -141,8 +165,8 @@ export default function AdminRequestsPage() {
                           rows={4}
                           disabled={!isPending || isBusy}
                           placeholder="Add a short decision note"
-                          value={decisionNotes[request._id] || ''}
-                          onChange={(event) => setDecisionNotes((prev) => ({ ...prev, [request._id]: event.target.value }))}
+                          value={decisionNotes[requestId] || ''}
+                          onChange={(event) => setDecisionNotes((prev) => ({ ...prev, [requestId]: event.target.value }))}
                         />
                       </label>
 
@@ -151,19 +175,6 @@ export default function AdminRequestsPage() {
                       ) : null}
                       {request.adminRequestDecisionNote ? (
                         <p className="text-xs text-[var(--text-secondary)]">Saved note: {request.adminRequestDecisionNote}</p>
-                      ) : null}
-
-                      {isPending ? (
-                        <div className="flex flex-wrap gap-2">
-                          <Button type="button" onClick={() => onReview(request._id, 'APPROVED')} disabled={isBusy}>
-                            <ShieldCheck className="h-4 w-4" />
-                            {isBusy ? 'Saving...' : 'Approve'}
-                          </Button>
-                          <Button type="button" variant="secondary" onClick={() => onReview(request._id, 'DENIED')} disabled={isBusy}>
-                            <ShieldX className="h-4 w-4" />
-                            {isBusy ? 'Saving...' : 'Deny'}
-                          </Button>
-                        </div>
                       ) : null}
                     </div>
                   </div>
