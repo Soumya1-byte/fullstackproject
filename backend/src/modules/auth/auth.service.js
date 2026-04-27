@@ -16,7 +16,10 @@ function buildAuthPayload(user) {
       id: user._id,
       name: user.name,
       email: user.email,
-      role: user.role
+      role: user.role,
+      adminRequestStatus: user.adminRequestStatus || 'NONE',
+      adminRequestRequestedAt: user.adminRequestRequestedAt || null,
+      adminRequestReviewedAt: user.adminRequestReviewedAt || null
     }
   };
 }
@@ -97,13 +100,6 @@ export const authService = {
       throw err;
     }
 
-    if (user.role === ROLES.ADMIN && user.email !== env.adminLoginEmail) {
-      const err = new Error('Invalid credentials');
-      err.status = 401;
-      err.code = 'INVALID_CREDENTIALS';
-      throw err;
-    }
-
     return buildAuthPayload(user);
   },
 
@@ -124,7 +120,7 @@ export const authService = {
       err.code = 'UNAUTHORIZED';
       throw err;
     }
-    const user = await User.findById(payload.sub).select('name email role');
+    const user = await User.findById(payload.sub).select('name email role adminRequestStatus adminRequestRequestedAt adminRequestReviewedAt');
 
     if (!user) {
       const err = new Error('User not found');
@@ -139,19 +135,30 @@ export const authService = {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        adminRequestStatus: user.adminRequestStatus || 'NONE',
+        adminRequestRequestedAt: user.adminRequestRequestedAt || null,
+        adminRequestReviewedAt: user.adminRequestReviewedAt || null
       }
     };
   },
 
   async me(userId) {
-    const user = await User.findById(userId).select('name email role');
+    const user = await User.findById(userId).select('name email role adminRequestStatus adminRequestRequestedAt adminRequestReviewedAt');
     if (!user) {
       const err = new Error('User not found');
       err.status = 404;
       err.code = 'USER_NOT_FOUND';
       throw err;
     }
-    return { id: user._id, name: user.name, email: user.email, role: user.role };
+    return {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      adminRequestStatus: user.adminRequestStatus || 'NONE',
+      adminRequestRequestedAt: user.adminRequestRequestedAt || null,
+      adminRequestReviewedAt: user.adminRequestReviewedAt || null
+    };
   }
 };

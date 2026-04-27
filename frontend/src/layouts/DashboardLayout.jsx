@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BarChart3, ClipboardCheck, FileText, GraduationCap, LayoutDashboard, LineChart, Sparkles, UserRound, BookOpenCheck } from 'lucide-react';
+import { BarChart3, ClipboardCheck, FileText, GraduationCap, LayoutDashboard, LineChart, Sparkles, UserRound, BookOpenCheck, ShieldCheck } from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
@@ -14,6 +14,7 @@ const adminLinks = [
   { to: '/admin/form-builder', label: 'Form Builder', icon: ClipboardCheck },
   { to: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/admin/export', label: 'Reports', icon: LineChart },
+  { to: '/admin/myadmins', label: 'My Admins', icon: ShieldCheck },
   { to: '/profile', label: 'Profile', icon: UserRound }
 ];
 

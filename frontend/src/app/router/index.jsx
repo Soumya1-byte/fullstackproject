@@ -12,6 +12,7 @@ import FormsListPage from '../../pages/admin/FormsListPage';
 import FormResponsesPage from '../../pages/admin/FormResponsesPage';
 import AnalyticsPage from '../../pages/admin/AnalyticsPage';
 import ReportExportPage from '../../pages/admin/ReportExportPage';
+import AdminRequestsPage from '../../pages/admin/AdminRequestsPage';
 import StudentOverviewPage from '../../pages/student/StudentOverviewPage';
 import CourseListPage from '../../pages/student/CourseListPage';
 import SubmitFeedbackPage from '../../pages/student/SubmitFeedbackPage';
@@ -64,6 +65,7 @@ export default function AppRouter() {
               <Route path="/admin/responses" element={<AnimatedOutlet><FormResponsesPage /></AnimatedOutlet>} />
               <Route path="/admin/analytics" element={<AnimatedOutlet><AnalyticsPage /></AnimatedOutlet>} />
               <Route path="/admin/export" element={<AnimatedOutlet><ReportExportPage /></AnimatedOutlet>} />
+              <Route path="/admin/myadmins" element={<AnimatedOutlet><AdminRequestsPage /></AnimatedOutlet>} />
             </Route>
 
             <Route element={<ProtectedRoute allow="student" />}>

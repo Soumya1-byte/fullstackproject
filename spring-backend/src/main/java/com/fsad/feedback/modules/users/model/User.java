@@ -22,6 +22,18 @@ public class User extends BaseDocument {
 
     private Role role;
 
+    private AdminRequestStatus adminRequestStatus = AdminRequestStatus.NONE;
+
+    private String adminRequestMessage;
+
+    private Instant adminRequestRequestedAt;
+
+    private Instant adminRequestReviewedAt;
+
+    private String adminRequestReviewedBy;
+
+    private String adminRequestDecisionNote;
+
     private Boolean isActive = true;
 
     private String departmentId;
@@ -66,6 +78,54 @@ public class User extends BaseDocument {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public AdminRequestStatus getAdminRequestStatus() {
+        return adminRequestStatus;
+    }
+
+    public void setAdminRequestStatus(AdminRequestStatus adminRequestStatus) {
+        this.adminRequestStatus = adminRequestStatus;
+    }
+
+    public String getAdminRequestMessage() {
+        return adminRequestMessage;
+    }
+
+    public void setAdminRequestMessage(String adminRequestMessage) {
+        this.adminRequestMessage = adminRequestMessage;
+    }
+
+    public Instant getAdminRequestRequestedAt() {
+        return adminRequestRequestedAt;
+    }
+
+    public void setAdminRequestRequestedAt(Instant adminRequestRequestedAt) {
+        this.adminRequestRequestedAt = adminRequestRequestedAt;
+    }
+
+    public Instant getAdminRequestReviewedAt() {
+        return adminRequestReviewedAt;
+    }
+
+    public void setAdminRequestReviewedAt(Instant adminRequestReviewedAt) {
+        this.adminRequestReviewedAt = adminRequestReviewedAt;
+    }
+
+    public String getAdminRequestReviewedBy() {
+        return adminRequestReviewedBy;
+    }
+
+    public void setAdminRequestReviewedBy(String adminRequestReviewedBy) {
+        this.adminRequestReviewedBy = adminRequestReviewedBy;
+    }
+
+    public String getAdminRequestDecisionNote() {
+        return adminRequestDecisionNote;
+    }
+
+    public void setAdminRequestDecisionNote(String adminRequestDecisionNote) {
+        this.adminRequestDecisionNote = adminRequestDecisionNote;
     }
 
     public Boolean getIsActive() {
