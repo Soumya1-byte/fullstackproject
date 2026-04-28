@@ -19,6 +19,14 @@ const profileSelection = [
   'adminRequestDecisionNote'
 ].join(' ');
 
+function normalizeValue(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function isPrimaryAdminEmail(email) {
+  return String(email || '').trim().toLowerCase() === env.adminLoginEmail;
+}
+
 export const userService = {
   async listStudents() {
     return User.find({ role: 'STUDENT' }).select('name email role').sort({ createdAt: -1 });
@@ -97,6 +105,14 @@ export const userService = {
   },
 
   async reviewAdminRequest(adminId, userId, payload) {
+    const actingAdmin = await User.findById(adminId).select('email role');
+    if (!actingAdmin) {
+      const err = new Error('Admin account not found');
+      err.status = 404;
+      err.code = 'USER_NOT_FOUND';
+      throw err;
+    }
+
     const user = await User.findById(userId).select(profileSelection);
     if (!user) {
       const err = new Error('User not found');
@@ -105,7 +121,30 @@ export const userService = {
       throw err;
     }
 
-    if (user.adminRequestStatus !== 'PENDING') {
+    const requestStatus = normalizeValue(user.adminRequestStatus);
+    const userRole = normalizeValue(user.role);
+    const isPrimaryAdmin = isPrimaryAdminEmail(actingAdmin.email);
+    const isPrimaryAdminTarget = isPrimaryAdminEmail(user.email);
+    const isApprovedAdmin = requestStatus === 'APPROVED' && userRole === ROLES.ADMIN;
+    const canDemoteApprovedAdmin = payload.decision === 'DENIED' && isPrimaryAdmin && !isPrimaryAdminTarget && isApprovedAdmin;
+
+    if (payload.decision === 'DENIED' && isApprovedAdmin) {
+      if (!isPrimaryAdmin) {
+        const err = new Error('Only the primary admin can remove admin access');
+        err.status = 403;
+        err.code = 'PRIMARY_ADMIN_REQUIRED';
+        throw err;
+      }
+
+      if (isPrimaryAdminTarget) {
+        const err = new Error('The primary admin account cannot be demoted');
+        err.status = 409;
+        err.code = 'PRIMARY_ADMIN_PROTECTED';
+        throw err;
+      }
+    }
+
+    if (requestStatus !== 'PENDING' && !canDemoteApprovedAdmin) {
       const err = new Error('Only pending requests can be reviewed');
       err.status = 409;
       err.code = 'ADMIN_REQUEST_NOT_PENDING';
@@ -121,55 +160,21 @@ export const userService = {
       user.role = 'ADMIN';
     }
 
+    if (canDemoteApprovedAdmin) {
+      user.role = ROLES.STUDENT;
+      if (!user.adminRequestDecisionNote) {
+        user.adminRequestDecisionNote = 'Admin access removed by primary admin';
+      }
+    }
+
     await user.save();
     return user;
   },
 
   async demoteAdmin(adminId, userId, payload) {
-    const actingAdmin = await User.findById(adminId).select('email role');
-    if (!actingAdmin) {
-      const err = new Error('Admin account not found');
-      err.status = 404;
-      err.code = 'USER_NOT_FOUND';
-      throw err;
-    }
-
-    if (actingAdmin.email !== env.adminLoginEmail) {
-      const err = new Error('Only the primary admin can remove admin access');
-      err.status = 403;
-      err.code = 'PRIMARY_ADMIN_REQUIRED';
-      throw err;
-    }
-
-    const user = await User.findById(userId).select(profileSelection);
-    if (!user) {
-      const err = new Error('User not found');
-      err.status = 404;
-      err.code = 'USER_NOT_FOUND';
-      throw err;
-    }
-
-    if (user.email === env.adminLoginEmail) {
-      const err = new Error('The primary admin account cannot be demoted');
-      err.status = 409;
-      err.code = 'PRIMARY_ADMIN_PROTECTED';
-      throw err;
-    }
-
-    if (user.role !== ROLES.ADMIN || user.adminRequestStatus !== 'APPROVED') {
-      const err = new Error('Only approved admins can be removed');
-      err.status = 409;
-      err.code = 'ADMIN_NOT_APPROVED';
-      throw err;
-    }
-
-    user.role = ROLES.STUDENT;
-    user.adminRequestStatus = 'DENIED';
-    user.adminRequestReviewedAt = new Date();
-    user.adminRequestReviewedBy = adminId;
-    user.adminRequestDecisionNote = payload.note || 'Admin access removed by primary admin';
-
-    await user.save();
-    return user;
+    return this.reviewAdminRequest(adminId, userId, {
+      decision: 'DENIED',
+      note: payload.note || 'Admin access removed by primary admin'
+    });
   }
 };

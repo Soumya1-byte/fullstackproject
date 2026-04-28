@@ -91,7 +91,7 @@ export default function AdminRequestsPage() {
   const onDemote = async (userId) => {
     setProcessingId(userId);
     try {
-      await userService.demoteAdmin(userId, { note: decisionNotes[userId] || '' });
+      await userService.reviewAdminRequest(userId, { decision: 'DENIED', note: decisionNotes[userId] || 'Admin access removed by primary admin' });
       pushToast('Admin access removed', 'success');
       await loadRequests();
     } catch (error) {
