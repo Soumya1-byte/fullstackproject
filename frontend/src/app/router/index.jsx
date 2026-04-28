@@ -58,6 +58,7 @@ export default function AppRouter() {
             <Route path="/profile" element={<AnimatedOutlet><ProfilePage /></AnimatedOutlet>} />
 
             <Route element={<ProtectedRoute allow="admin" />}>
+              <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="/admin/dashboard" element={<AnimatedOutlet><AdminOverviewPage /></AnimatedOutlet>} />
               <Route path="/admin/courses" element={<AnimatedOutlet><CourseManagerPage /></AnimatedOutlet>} />
               <Route path="/admin/forms" element={<AnimatedOutlet><FormsListPage /></AnimatedOutlet>} />
@@ -69,6 +70,7 @@ export default function AppRouter() {
             </Route>
 
             <Route element={<ProtectedRoute allow="student" />}>
+              <Route path="/student" element={<Navigate to="/student/dashboard" replace />} />
               <Route path="/student/dashboard" element={<AnimatedOutlet><StudentOverviewPage /></AnimatedOutlet>} />
               <Route path="/student/courses" element={<AnimatedOutlet><CourseListPage /></AnimatedOutlet>} />
               <Route path="/student/feedback" element={<AnimatedOutlet><SubmitFeedbackPage /></AnimatedOutlet>} />
