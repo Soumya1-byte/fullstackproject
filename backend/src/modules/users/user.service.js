@@ -99,9 +99,14 @@ export const userService = {
   },
 
   async listAdminRequests() {
-    return User.find({ adminRequestStatus: { $in: ['PENDING', 'APPROVED', 'DENIED'] } })
+    const users = await User.find({ adminRequestStatus: { $in: ['PENDING', 'APPROVED', 'DENIED'] } })
       .select('name email role adminRequestStatus adminRequestMessage adminRequestRequestedAt adminRequestReviewedAt adminRequestDecisionNote createdAt')
       .sort({ adminRequestRequestedAt: -1, createdAt: -1 });
+
+    return users.map((user) => ({
+      ...user.toObject(),
+      isPrimaryAdmin: isPrimaryAdminEmail(user.email)
+    }));
   },
 
   async reviewAdminRequest(adminId, userId, payload) {

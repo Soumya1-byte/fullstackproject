@@ -12,6 +12,8 @@ function normalizeUserPayload(user) {
   if (!user) return user;
   return {
     ...user,
+    _id: user._id || user.id || null,
+    isPrimaryAdmin: Boolean(user.isPrimaryAdmin),
     adminRequestStatus: normalizeAdminRequestStatus(user.adminRequestStatus)
   };
 }

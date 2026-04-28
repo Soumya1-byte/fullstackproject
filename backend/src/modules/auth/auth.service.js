@@ -4,6 +4,10 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../sha
 import { env } from '../../config/env.js';
 import { ROLES } from '../../shared/enums/roles.js';
 
+function isPrimaryAdminEmail(email) {
+  return String(email || '').trim().toLowerCase() === env.adminLoginEmail;
+}
+
 function buildAuthPayload(user) {
   const claims = { sub: user._id.toString(), role: user.role, tokenVersion: 1 };
   const accessToken = signAccessToken(claims);
@@ -17,6 +21,7 @@ function buildAuthPayload(user) {
       name: user.name,
       email: user.email,
       role: user.role,
+      isPrimaryAdmin: isPrimaryAdminEmail(user.email),
       adminRequestStatus: user.adminRequestStatus || 'NONE',
       adminRequestRequestedAt: user.adminRequestRequestedAt || null,
       adminRequestReviewedAt: user.adminRequestReviewedAt || null
@@ -136,6 +141,7 @@ export const authService = {
         name: user.name,
         email: user.email,
         role: user.role,
+        isPrimaryAdmin: isPrimaryAdminEmail(user.email),
         adminRequestStatus: user.adminRequestStatus || 'NONE',
         adminRequestRequestedAt: user.adminRequestRequestedAt || null,
         adminRequestReviewedAt: user.adminRequestReviewedAt || null
@@ -156,6 +162,7 @@ export const authService = {
       name: user.name,
       email: user.email,
       role: user.role,
+      isPrimaryAdmin: isPrimaryAdminEmail(user.email),
       adminRequestStatus: user.adminRequestStatus || 'NONE',
       adminRequestRequestedAt: user.adminRequestRequestedAt || null,
       adminRequestReviewedAt: user.adminRequestReviewedAt || null

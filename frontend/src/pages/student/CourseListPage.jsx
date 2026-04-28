@@ -1,16 +1,34 @@
 import { useEffect, useState } from 'react';
 import Card from '../../components/ui/Card';
 import { courseService } from '../../services/courseService';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function CourseListPage() {
   const [courses, setCourses] = useState([]);
+  const { bootstrapping, isAuthenticated } = useAuth();
 
   useEffect(() => {
+    if (bootstrapping || !isAuthenticated) return undefined;
+
+    let active = true;
+
     courseService
       .list()
-      .then((data) => setCourses(Array.isArray(data) ? data : []))
-      .catch(() => setCourses([]));
-  }, []);
+      .then((data) => {
+        if (active) {
+          setCourses(Array.isArray(data) ? data : []);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setCourses([]);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [bootstrapping, isAuthenticated]);
 
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">

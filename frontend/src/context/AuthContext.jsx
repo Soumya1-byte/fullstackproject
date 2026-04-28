@@ -36,7 +36,8 @@ function normalizeUser(user) {
   return {
     ...user,
     _id: user._id || user.id || null,
-    role: normalizeRole(user.role)
+    role: normalizeRole(user.role),
+    isPrimaryAdmin: Boolean(user.isPrimaryAdmin)
   };
 }
 

@@ -9,8 +9,6 @@ import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { userService } from '../../services/userService';
 
-const PRIMARY_ADMIN_EMAIL = 'soumya.mishra.7812@gmail.com';
-
 function getErrorMessage(error, fallback) {
   return (
     error?.response?.data?.error?.message ||
@@ -52,7 +50,7 @@ export default function AdminRequestsPage() {
   const [processingId, setProcessingId] = useState('');
   const { user } = useAuth();
   const { pushToast } = useToast();
-  const isPrimaryAdmin = user?.email?.toLowerCase() === PRIMARY_ADMIN_EMAIL;
+  const isPrimaryAdmin = Boolean(user?.isPrimaryAdmin);
 
   const loadRequests = async () => {
     const data = await userService.listAdminRequests();
@@ -148,7 +146,7 @@ export default function AdminRequestsPage() {
               const isPending = normalizedStatus === 'PENDING';
               const isApprovedAdmin = normalizedStatus === 'APPROVED' && String(request.role || '').toUpperCase() === 'ADMIN';
               const isBusy = processingId === requestId;
-              const canDemote = isPrimaryAdmin && isApprovedAdmin && request.email?.toLowerCase() !== PRIMARY_ADMIN_EMAIL;
+              const canDemote = isPrimaryAdmin && isApprovedAdmin && !request.isPrimaryAdmin;
 
               return (
                 <div key={requestId} className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-elevated)] p-4">

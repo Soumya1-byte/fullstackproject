@@ -5,25 +5,37 @@ import SectionCard from '../../components/ui/SectionCard';
 import { courseService } from '../../services/courseService';
 import { formService } from '../../services/formService';
 import { responseService } from '../../services/responseService';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function StudentOverviewPage() {
   const [courses, setCourses] = useState([]);
   const [forms, setForms] = useState([]);
   const [submissions, setSubmissions] = useState([]);
+  const { bootstrapping, isAuthenticated } = useAuth();
 
   useEffect(() => {
+    if (bootstrapping || !isAuthenticated) return undefined;
+
+    let active = true;
+
     Promise.all([courseService.list(), formService.list(), responseService.myStatuses()])
       .then(([courseData, formData, submissionData]) => {
+        if (!active) return;
         setCourses(courseData || []);
         setForms(formData || []);
         setSubmissions(submissionData || []);
       })
       .catch(() => {
+        if (!active) return;
         setCourses([]);
         setForms([]);
         setSubmissions([]);
       });
-  }, []);
+
+    return () => {
+      active = false;
+    };
+  }, [bootstrapping, isAuthenticated]);
 
   const pendingForms = useMemo(() => {
     const submittedFormIds = new Set(submissions.map((item) => String(item.formId)));

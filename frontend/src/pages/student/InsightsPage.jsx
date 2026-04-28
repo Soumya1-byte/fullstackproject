@@ -4,20 +4,38 @@ import RatingBarChart from '../../components/charts/RatingBarChart';
 import Card from '../../components/ui/Card';
 import { formService } from '../../services/formService';
 import { responseService } from '../../services/responseService';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function InsightsPage() {
   const [forms, setForms] = useState([]);
   const [formId, setFormId] = useState('');
   const [insights, setInsights] = useState({ satisfaction: [], distribution: [], suppressed: false });
   const [errorMessage, setErrorMessage] = useState('');
+  const { bootstrapping, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    formService.list().then((data) => {
-      const list = data || [];
-      setForms(list);
-      if (list.length) setFormId(list[0]._id);
-    });
-  }, []);
+    if (bootstrapping || !isAuthenticated) return undefined;
+
+    let active = true;
+
+    formService
+      .list()
+      .then((data) => {
+        if (!active) return;
+        const list = data || [];
+        setForms(list);
+        setFormId(list[0]?._id || '');
+      })
+      .catch(() => {
+        if (!active) return;
+        setForms([]);
+        setFormId('');
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [bootstrapping, isAuthenticated]);
 
   useEffect(() => {
     if (!formId) return;
