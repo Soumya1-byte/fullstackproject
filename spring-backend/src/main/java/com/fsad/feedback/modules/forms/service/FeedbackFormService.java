@@ -63,7 +63,7 @@ public class FeedbackFormService {
         if (user.role().isAdminLike()) {
             forms = feedbackFormRepository.findByCreatedBy(user.id(), sort);
         } else {
-            List<String> courseIds = courseRepository.findByAssignedStudentIdsContaining(user.id(), Sort.unsorted()).stream()
+            List<String> courseIds = courseRepository.findByAssignedStudentId(user.id()).stream()
                     .map(Course::getId)
                     .toList();
             forms = courseIds.isEmpty()

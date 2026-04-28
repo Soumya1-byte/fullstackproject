@@ -33,7 +33,7 @@ public class CourseService {
         Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
         List<Course> courses = user.role().isAdminLike()
                 ? courseRepository.findByAdminId(user.id(), sort)
-                : courseRepository.findByAssignedStudentIdsContaining(user.id(), sort);
+                : courseRepository.findByAssignedStudentId(user.id());
         return courses.stream().map(this::toPayload).toList();
     }
 
@@ -65,12 +65,13 @@ public class CourseService {
             if (studentId == null || studentId.isBlank()) {
                 continue;
             }
-            User student = userRepository.findById(studentId)
+            String normalizedStudentId = studentId.trim();
+            User student = userRepository.findById(normalizedStudentId)
                     .orElseThrow(() -> new AppException(HttpStatus.BAD_REQUEST, "USER_NOT_FOUND", "Student not found"));
             if (student.getRole() != Role.STUDENT) {
                 throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_STUDENT", "Only student users can be assigned");
             }
-            uniqueIds.add(studentId);
+            uniqueIds.add(normalizedStudentId);
         }
 
         course.setAssignedStudentIds(List.copyOf(uniqueIds));
