@@ -7,6 +7,8 @@ import com.fsad.feedback.modules.courses.repository.CourseRepository;
 import com.fsad.feedback.modules.forms.model.FeedbackForm;
 import com.fsad.feedback.modules.forms.model.FormStatus;
 import com.fsad.feedback.modules.forms.repository.FeedbackFormRepository;
+import com.fsad.feedback.modules.notifications.model.NotificationType;
+import com.fsad.feedback.modules.notifications.service.NotificationService;
 import com.fsad.feedback.modules.responses.dto.AnswerPayload;
 import com.fsad.feedback.modules.responses.dto.InsightPayload;
 import com.fsad.feedback.modules.responses.dto.ResponsePayload;
@@ -30,15 +32,18 @@ public class FeedbackResponseService {
     private final FeedbackResponseRepository feedbackResponseRepository;
     private final FeedbackFormRepository feedbackFormRepository;
     private final CourseRepository courseRepository;
+    private final NotificationService notificationService;
 
     public FeedbackResponseService(
             FeedbackResponseRepository feedbackResponseRepository,
             FeedbackFormRepository feedbackFormRepository,
-            CourseRepository courseRepository
+            CourseRepository courseRepository,
+            NotificationService notificationService
     ) {
         this.feedbackResponseRepository = feedbackResponseRepository;
         this.feedbackFormRepository = feedbackFormRepository;
         this.courseRepository = courseRepository;
+        this.notificationService = notificationService;
     }
 
     public ResponsePayload submit(AuthenticatedUser user, String formId, SubmitResponseRequest request) {
@@ -70,7 +75,16 @@ public class FeedbackResponseService {
         }).toList());
         response.setSubmittedAt(Instant.now());
 
-        return toPayload(feedbackResponseRepository.save(response));
+        FeedbackResponse savedResponse = feedbackResponseRepository.save(response);
+        notificationService.createForUser(
+                form.getCreatedBy(),
+                NotificationType.FEEDBACK_SUBMITTED,
+                "New feedback submitted",
+                "A student submitted feedback for " + form.getTitle() + ".",
+                "/admin/responses"
+        );
+
+        return toPayload(savedResponse);
     }
 
     public List<ResponsePayload> listForForm(AuthenticatedUser user, String formId) {

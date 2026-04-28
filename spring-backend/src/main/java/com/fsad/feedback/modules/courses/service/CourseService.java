@@ -7,6 +7,8 @@ import com.fsad.feedback.modules.courses.dto.CoursePayload;
 import com.fsad.feedback.modules.courses.dto.CreateCourseRequest;
 import com.fsad.feedback.modules.courses.model.Course;
 import com.fsad.feedback.modules.courses.repository.CourseRepository;
+import com.fsad.feedback.modules.notifications.model.NotificationType;
+import com.fsad.feedback.modules.notifications.service.NotificationService;
 import com.fsad.feedback.modules.users.model.Role;
 import com.fsad.feedback.modules.users.model.User;
 import com.fsad.feedback.modules.users.repository.UserRepository;
@@ -23,10 +25,12 @@ public class CourseService {
 
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
-    public CourseService(CourseRepository courseRepository, UserRepository userRepository) {
+    public CourseService(CourseRepository courseRepository, UserRepository userRepository, NotificationService notificationService) {
         this.courseRepository = courseRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     public List<CoursePayload> list(AuthenticatedUser user) {
@@ -75,7 +79,15 @@ public class CourseService {
         }
 
         course.setAssignedStudentIds(List.copyOf(uniqueIds));
-        return toPayload(courseRepository.save(course));
+        Course savedCourse = courseRepository.save(course);
+        notificationService.createForUsers(
+                savedCourse.getAssignedStudentIds(),
+                NotificationType.COURSE_ASSIGNED,
+                "New course assigned",
+                savedCourse.getCode() + " - " + savedCourse.getTitle() + " was assigned to you.",
+                "/student/courses"
+        );
+        return toPayload(savedCourse);
     }
 
     public Course requireAccessibleCourse(String courseId, AuthenticatedUser user) {

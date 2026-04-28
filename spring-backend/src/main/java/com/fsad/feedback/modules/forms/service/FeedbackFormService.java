@@ -4,6 +4,8 @@ import com.fsad.feedback.common.error.AppException;
 import com.fsad.feedback.common.security.AuthenticatedUser;
 import com.fsad.feedback.modules.courses.model.Course;
 import com.fsad.feedback.modules.courses.repository.CourseRepository;
+import com.fsad.feedback.modules.notifications.model.NotificationType;
+import com.fsad.feedback.modules.notifications.service.NotificationService;
 import com.fsad.feedback.modules.forms.dto.CreateFormRequest;
 import com.fsad.feedback.modules.forms.dto.FormPayload;
 import com.fsad.feedback.modules.forms.dto.FormQuestionPayload;
@@ -25,10 +27,16 @@ public class FeedbackFormService {
 
     private final FeedbackFormRepository feedbackFormRepository;
     private final CourseRepository courseRepository;
+    private final NotificationService notificationService;
 
-    public FeedbackFormService(FeedbackFormRepository feedbackFormRepository, CourseRepository courseRepository) {
+    public FeedbackFormService(
+            FeedbackFormRepository feedbackFormRepository,
+            CourseRepository courseRepository,
+            NotificationService notificationService
+    ) {
         this.feedbackFormRepository = feedbackFormRepository;
         this.courseRepository = courseRepository;
+        this.notificationService = notificationService;
     }
 
     public FormPayload create(AuthenticatedUser user, CreateFormRequest request) {
@@ -82,7 +90,17 @@ public class FeedbackFormService {
         FeedbackForm form = requireOwnedForm(formId, user);
         form.setStatus(FormStatus.PUBLISHED);
         form.setPublishAt(Instant.now());
-        return toPayload(feedbackFormRepository.save(form));
+        FeedbackForm savedForm = feedbackFormRepository.save(form);
+        Course course = courseRepository.findById(savedForm.getCourseId())
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "COURSE_NOT_FOUND", "Course not found"));
+        notificationService.createForUsers(
+                course.getAssignedStudentIds(),
+                NotificationType.FORM_PUBLISHED,
+                "New feedback form available",
+                savedForm.getTitle() + " is now available for " + course.getCode() + ".",
+                "/student/feedback"
+        );
+        return toPayload(savedForm);
     }
 
     public FormPayload close(AuthenticatedUser user, String formId) {

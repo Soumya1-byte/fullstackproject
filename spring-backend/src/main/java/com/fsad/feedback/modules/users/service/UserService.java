@@ -2,6 +2,8 @@ package com.fsad.feedback.modules.users.service;
 
 import com.fsad.feedback.common.error.AppException;
 import com.fsad.feedback.modules.auth.config.AdminAuthProperties;
+import com.fsad.feedback.modules.notifications.model.NotificationType;
+import com.fsad.feedback.modules.notifications.service.NotificationService;
 import com.fsad.feedback.modules.users.dto.DemoteAdminRequest;
 import com.fsad.feedback.modules.users.dto.RequestAdminAccessRequest;
 import com.fsad.feedback.modules.users.dto.ReviewAdminAccessRequest;
@@ -23,10 +25,12 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final AdminAuthProperties adminAuthProperties;
+    private final NotificationService notificationService;
 
-    public UserService(UserRepository userRepository, AdminAuthProperties adminAuthProperties) {
+    public UserService(UserRepository userRepository, AdminAuthProperties adminAuthProperties, NotificationService notificationService) {
         this.userRepository = userRepository;
         this.adminAuthProperties = adminAuthProperties;
+        this.notificationService = notificationService;
     }
 
     public List<UserProfilePayload> listStudents() {
@@ -72,8 +76,21 @@ public class UserService {
         user.setAdminRequestReviewedAt(null);
         user.setAdminRequestReviewedBy(null);
         user.setAdminRequestDecisionNote(null);
+        User savedUser = userRepository.save(user);
 
-        return toPayload(userRepository.save(user));
+        List<String> adminIds = userRepository.findAll().stream()
+                .filter(existingUser -> existingUser.getRole().isAdminLike())
+                .map(User::getId)
+                .toList();
+        notificationService.createForUsers(
+                adminIds,
+                NotificationType.ADMIN_REQUEST_SUBMITTED,
+                "New admin access request",
+                user.getName() + " requested admin access.",
+                "/admin/myadmins"
+        );
+
+        return toPayload(savedUser);
     }
 
     public List<UserProfilePayload> listAdminRequests() {
@@ -135,7 +152,19 @@ public class UserService {
             }
         }
 
-        return toPayload(userRepository.save(user));
+        User savedUser = userRepository.save(user);
+        String decisionLabel = request.decision() == AdminRequestStatus.APPROVED ? "approved" : "updated";
+        notificationService.createForUser(
+                user.getId(),
+                NotificationType.ADMIN_REQUEST_REVIEWED,
+                "Admin access " + decisionLabel,
+                request.decision() == AdminRequestStatus.APPROVED
+                        ? "Your admin access request was approved."
+                        : "Your admin access status was updated.",
+                "/profile"
+        );
+
+        return toPayload(savedUser);
     }
 
     public UserProfilePayload demoteAdmin(String adminId, String userId, DemoteAdminRequest request) {
