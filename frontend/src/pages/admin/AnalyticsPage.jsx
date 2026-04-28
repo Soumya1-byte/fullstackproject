@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Filter, Layers3, Sparkles } from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
 import Select from '../../components/ui/Select';
 import Button from '../../components/ui/Button';
 import SectionCard from '../../components/ui/SectionCard';
@@ -11,6 +12,7 @@ import { analyticsService } from '../../services/analyticsService';
 import { courseService } from '../../services/courseService';
 
 export default function AnalyticsPage() {
+  const { dashboardSearchQuery = '' } = useOutletContext() || {};
   const [courseId, setCourseId] = useState('');
   const [courses, setCourses] = useState([]);
   const [semester, setSemester] = useState('');
@@ -44,14 +46,29 @@ export default function AnalyticsPage() {
     analyticsService.overview({ courseId, semester }).then((payload) => setData(payload || {}));
   }, [courseId, semester]);
 
+  const normalizedQuery = dashboardSearchQuery.trim().toLowerCase();
+
+  const filteredCourses = useMemo(() => {
+    if (!normalizedQuery) return courses;
+    return courses.filter((course) =>
+      [course.code, course.title, course.semester, course.department].some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
+    );
+  }, [courses, normalizedQuery]);
+
+  useEffect(() => {
+    if (courseId && !filteredCourses.some((course) => course._id === courseId)) {
+      setCourseId('');
+    }
+  }, [courseId, filteredCourses]);
+
   const drillDown = useMemo(() => {
     if (!activeBucket) return [];
-    return courses.filter((course) => {
+    return filteredCourses.filter((course) => {
       if (semester && course.semester !== semester) return false;
       if (department && course.department !== department) return false;
       return true;
     });
-  }, [activeBucket, courses, semester, department]);
+  }, [activeBucket, filteredCourses, semester, department]);
 
   return (
     <div className="space-y-6">
@@ -65,7 +82,7 @@ export default function AnalyticsPage() {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <Select value={courseId} onChange={(e) => setCourseId(e.target.value)}>
             <option value="">All Courses</option>
-            {courses.map((course) => (
+            {filteredCourses.map((course) => (
               <option key={course._id} value={course._id}>
                 {course.code} - {course.title}
               </option>

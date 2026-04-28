@@ -40,6 +40,24 @@ export const feedbackFormService = {
       throw err;
     }
 
+    if (user.role !== 'ADMIN') {
+      if (form.status !== 'PUBLISHED') {
+        const err = new Error('Form not available');
+        err.status = 404;
+        err.code = 'FORM_NOT_AVAILABLE';
+        throw err;
+      }
+
+      const course = await Course.findById(form.courseId).select('assignedStudentIds');
+      const isAssigned = course?.assignedStudentIds?.some((studentId) => studentId.toString() === user.sub);
+      if (!isAssigned) {
+        const err = new Error('Access denied');
+        err.status = 403;
+        err.code = 'FORM_ACCESS_DENIED';
+        throw err;
+      }
+    }
+
     return form;
   },
 

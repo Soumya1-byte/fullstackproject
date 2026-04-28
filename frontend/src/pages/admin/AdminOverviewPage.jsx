@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { AlertTriangle, Award, BookOpen, MessageSquare, Sparkles, TrendingUp } from 'lucide-react';
 import StatsCard from '../../components/charts/StatsCard';
 import SatisfactionPieChart from '../../components/charts/SatisfactionPieChart';
@@ -11,6 +12,7 @@ import { courseService } from '../../services/courseService';
 import { formService } from '../../services/formService';
 
 export default function AdminOverviewPage() {
+  const { dashboardSearchQuery = '' } = useOutletContext() || {};
   const [courses, setCourses] = useState([]);
   const [forms, setForms] = useState([]);
   const [overview, setOverview] = useState({ satisfaction: [], distribution: [], trends: [], suppressed: false });
@@ -29,18 +31,34 @@ export default function AdminOverviewPage() {
       });
   }, []);
 
+  const normalizedQuery = dashboardSearchQuery.trim().toLowerCase();
+
+  const filteredCourses = useMemo(() => {
+    if (!normalizedQuery) return courses;
+    return courses.filter((course) =>
+      [course.code, course.title, course.semester, course.department].some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
+    );
+  }, [courses, normalizedQuery]);
+
+  const filteredForms = useMemo(() => {
+    if (!normalizedQuery) return forms;
+    return forms.filter((form) =>
+      [form.title, form.status].some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
+    );
+  }, [forms, normalizedQuery]);
+
   const totals = useMemo(() => {
     const totalResponses = (overview.distribution || []).reduce((sum, item) => sum + item.count, 0);
     const weighted = (overview.distribution || []).reduce((sum, item) => sum + Number(item.bucket) * item.count, 0);
     const avgRating = totalResponses ? (weighted / totalResponses).toFixed(2) : '0.00';
 
     return {
-      totalCourses: courses.length,
+      totalCourses: filteredCourses.length,
       avgRating,
       totalResponses,
-      publishedForms: forms.filter((form) => form.status === 'PUBLISHED').length
+      publishedForms: filteredForms.filter((form) => form.status === 'PUBLISHED').length
     };
-  }, [courses, forms, overview]);
+  }, [filteredCourses, filteredForms, overview]);
 
   const intelligence = useMemo(() => {
     const strongest = [...(overview.distribution || [])].sort((a, b) => b.count - a.count)[0];
@@ -85,17 +103,21 @@ export default function AdminOverviewPage() {
 
         <SectionCard title="Priority Queue" subtitle="Courses to monitor this week">
           <div className="space-y-2">
-            {courses.slice(0, 4).map((course) => (
+            {filteredCourses.slice(0, 4).map((course) => (
               <div key={course._id} className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] px-3 py-2.5">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">{course.code}</p>
                 <p className="text-xs text-[var(--text-muted)]">{course.title}</p>
               </div>
             ))}
-            {!courses.length ? (
+            {!filteredCourses.length ? (
               <EmptyState
                 icon={AlertTriangle}
-                title="No course activity"
-                description="Create or assign courses to begin tracking quality metrics."
+                title={normalizedQuery ? 'No matching courses' : 'No course activity'}
+                description={
+                  normalizedQuery
+                    ? 'Try a different course code, title, semester, or department.'
+                    : 'Create or assign courses to begin tracking quality metrics.'
+                }
               />
             ) : null}
           </div>

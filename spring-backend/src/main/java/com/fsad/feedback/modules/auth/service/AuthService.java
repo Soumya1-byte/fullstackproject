@@ -92,10 +92,6 @@ public class AuthService {
             throw invalidCredentials();
         }
 
-        if (user.getRole() == Role.ADMIN && !normalizedEmail.equals(configuredAdminEmail)) {
-            throw invalidCredentials();
-        }
-
         user.setLastLoginAt(Instant.now());
         return buildAuthResult(userRepository.save(user));
     }
@@ -141,7 +137,20 @@ public class AuthService {
     }
 
     private UserPayload toPayload(User user) {
-        return new UserPayload(user.getId(), user.getName(), user.getEmail(), user.getRole());
+        return new UserPayload(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole(),
+                isPrimaryAdminEmail(user.getEmail()),
+                user.getAdminRequestStatus(),
+                user.getAdminRequestRequestedAt(),
+                user.getAdminRequestReviewedAt()
+        );
+    }
+
+    private boolean isPrimaryAdminEmail(String email) {
+        return normalizeEmail(email).equals(normalizeEmail(adminAuthProperties.adminLoginEmail()));
     }
 
     private String normalizeEmail(String email) {

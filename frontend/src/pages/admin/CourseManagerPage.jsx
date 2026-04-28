@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BookOpenCheck, Plus, Users } from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
@@ -14,6 +15,7 @@ function toggleId(ids, id) {
 }
 
 export default function CourseManagerPage() {
+  const { dashboardSearchQuery = '' } = useOutletContext() || {};
   const [courses, setCourses] = useState([]);
   const [students, setStudents] = useState([]);
   const [selectedCourseId, setSelectedCourseId] = useState('');
@@ -47,7 +49,37 @@ export default function CourseManagerPage() {
     setSelectedStudentIds((selected?.assignedStudentIds || []).map(String));
   }, [selectedCourseId, courses]);
 
-  const selectedCourse = useMemo(() => courses.find((course) => course._id === selectedCourseId), [courses, selectedCourseId]);
+  const normalizedQuery = dashboardSearchQuery.trim().toLowerCase();
+
+  const matchingCourses = useMemo(() => {
+    if (!normalizedQuery) return courses;
+    return courses.filter((course) =>
+      [course.code, course.title, course.semester, course.department].some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
+    );
+  }, [courses, normalizedQuery]);
+
+  const filteredStudents = useMemo(() => {
+    if (!normalizedQuery) return students;
+    return students.filter((student) =>
+      [student.name, student.email].some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
+    );
+  }, [students, normalizedQuery]);
+
+  const filteredCourses = normalizedQuery && !matchingCourses.length && filteredStudents.length ? courses : matchingCourses;
+  const hasSearchMatches = courses.length > 0 && (filteredCourses.length || filteredStudents.length);
+
+  useEffect(() => {
+    if (!filteredCourses.length) {
+      setSelectedCourseId('');
+      return;
+    }
+
+    if (!filteredCourses.some((course) => course._id === selectedCourseId)) {
+      setSelectedCourseId(filteredCourses[0]._id);
+    }
+  }, [filteredCourses, selectedCourseId]);
+
+  const selectedCourse = useMemo(() => filteredCourses.find((course) => course._id === selectedCourseId), [filteredCourses, selectedCourseId]);
 
   const onCreateCourse = async () => {
     if (!newCourse.code || !newCourse.title || !newCourse.semester || !newCourse.department) {
@@ -109,12 +141,20 @@ export default function CourseManagerPage() {
       </SectionCard>
 
       <SectionCard title="Assign Students" subtitle="Students can submit only forms from courses they are enrolled in">
-        {!courses.length ? (
-          <EmptyState icon={BookOpenCheck} title="No courses available" description="Create a course first, then assign students and publish forms." />
+        {!hasSearchMatches ? (
+          <EmptyState
+            icon={BookOpenCheck}
+            title={normalizedQuery ? 'No matching courses or students' : 'No courses available'}
+            description={
+              normalizedQuery
+                ? 'Try a different course code, title, semester, department, student name, or student email.'
+                : 'Create a course first, then assign students and publish forms.'
+            }
+          />
         ) : (
           <div className="space-y-4">
             <Select value={selectedCourseId} onChange={(e) => setSelectedCourseId(e.target.value)}>
-              {courses.map((course) => (
+              {filteredCourses.map((course) => (
                 <option key={course._id} value={course._id}>
                   {course.code} - {course.title} ({course.semester})
                 </option>
@@ -128,7 +168,7 @@ export default function CourseManagerPage() {
               </p>
 
               <div className="grid gap-2 md:grid-cols-2">
-                {students.map((student) => {
+                {filteredStudents.map((student) => {
                   const checked = selectedStudentIds.includes(String(student._id));
                   return (
                     <label key={student._id} className="flex items-center gap-2 rounded-xl border border-[var(--line-soft)] bg-[var(--surface-card)] px-3 py-2 text-sm">
@@ -144,6 +184,9 @@ export default function CourseManagerPage() {
                   );
                 })}
               </div>
+              {!filteredStudents.length ? (
+                <p className="mt-3 text-sm text-[var(--text-muted)]">No students match the current search.</p>
+              ) : null}
             </div>
 
             <Button type="button" onClick={onSaveAssignments} disabled={savingAssignments || !selectedCourseId}>

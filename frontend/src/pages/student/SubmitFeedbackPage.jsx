@@ -9,6 +9,7 @@ import QuestionRenderer from '../../components/feedback/QuestionRenderer';
 import { formService } from '../../services/formService';
 import { responseService } from '../../services/responseService';
 import { useToast } from '../../hooks/useToast';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function SubmitFeedbackPage() {
   const [forms, setForms] = useState([]);
@@ -16,14 +17,31 @@ export default function SubmitFeedbackPage() {
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const { pushToast } = useToast();
+  const { bootstrapping, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    formService.list().then((data) => {
-      const list = data || [];
-      setForms(list);
-      setSelected(list[0] || null);
-    });
-  }, []);
+    if (bootstrapping || !isAuthenticated) return undefined;
+
+    let active = true;
+
+    formService
+      .list()
+      .then((data) => {
+        if (!active) return;
+        const list = data || [];
+        setForms(list);
+        setSelected(list[0] || null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setForms([]);
+        setSelected(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [bootstrapping, isAuthenticated]);
 
   const totalQuestions = selected?.questions?.length || 0;
   const answeredCount = useMemo(() => {

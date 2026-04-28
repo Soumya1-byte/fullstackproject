@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import FormBuilderCanvas from '../../components/feedback/FormBuilderCanvas';
 import FormPreview from '../../components/feedback/FormPreview';
 import Button from '../../components/ui/Button';
@@ -12,6 +12,7 @@ import { courseService } from '../../services/courseService';
 import { useToast } from '../../hooks/useToast';
 
 export default function FormBuilderPage() {
+  const { dashboardSearchQuery = '' } = useOutletContext() || {};
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [courseId, setCourseId] = useState('');
@@ -29,6 +30,26 @@ export default function FormBuilderPage() {
       })
       .catch(() => setCourses([]));
   }, []);
+
+  const normalizedQuery = dashboardSearchQuery.trim().toLowerCase();
+
+  const filteredCourses = useMemo(() => {
+    if (!normalizedQuery) return courses;
+    return courses.filter((course) =>
+      [course.code, course.title, course.semester, course.department].some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
+    );
+  }, [courses, normalizedQuery]);
+
+  useEffect(() => {
+    if (!filteredCourses.length) {
+      setCourseId('');
+      return;
+    }
+
+    if (!filteredCourses.some((course) => course._id === courseId)) {
+      setCourseId(filteredCourses[0]._id);
+    }
+  }, [courseId, filteredCourses]);
 
   const onSave = async () => {
     if (!title.trim()) {
@@ -100,15 +121,15 @@ export default function FormBuilderPage() {
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Form title" />
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Describe the goal of this form" />
             <Select value={courseId} onChange={(e) => setCourseId(e.target.value)}>
-              {!courses.length && <option value="">No courses available. Create one in Courses.</option>}
-              {courses.map((course) => (
+              {!filteredCourses.length && <option value="">{normalizedQuery ? 'No matching courses' : 'No courses available. Create one in Courses.'}</option>}
+              {filteredCourses.map((course) => (
                 <option key={course._id} value={course._id}>
                   {course.code} - {course.title}
                 </option>
               ))}
             </Select>
           </div>
-          <FormBuilderCanvas questions={questions} setQuestions={setQuestions} />
+          <FormBuilderCanvas questions={questions} setQuestions={setQuestions} searchQuery={dashboardSearchQuery} />
           <Button className="mt-4" onClick={onSave} type="button">
             Save Draft
           </Button>

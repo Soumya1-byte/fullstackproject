@@ -1,4 +1,10 @@
 import { Course } from './course.model.js';
+import { User } from '../users/user.model.js';
+import { ROLES } from '../../shared/enums/roles.js';
+
+function normalizeStudentIds(studentIds = []) {
+  return [...new Set(studentIds.map((studentId) => String(studentId || '').trim()).filter(Boolean))];
+}
 
 export const courseService = {
   async list(user) {
@@ -35,10 +41,15 @@ export const courseService = {
   },
 
   async assignStudents(user, id, studentIds) {
-    const uniqueStudentIds = [...new Set((studentIds || []).map(String))];
+    const uniqueStudentIds = normalizeStudentIds(studentIds);
+    const matchedStudents = await User.find({
+      _id: { $in: uniqueStudentIds },
+      role: ROLES.STUDENT
+    }).select('_id');
+    const validStudentIds = matchedStudents.map((student) => student._id);
     const course = await Course.findOneAndUpdate(
       { _id: id, adminId: user.sub },
-      { $set: { assignedStudentIds: uniqueStudentIds } },
+      { $set: { assignedStudentIds: validStudentIds } },
       { new: true }
     );
 

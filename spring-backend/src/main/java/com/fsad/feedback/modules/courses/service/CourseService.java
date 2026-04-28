@@ -7,6 +7,8 @@ import com.fsad.feedback.modules.courses.dto.CoursePayload;
 import com.fsad.feedback.modules.courses.dto.CreateCourseRequest;
 import com.fsad.feedback.modules.courses.model.Course;
 import com.fsad.feedback.modules.courses.repository.CourseRepository;
+import com.fsad.feedback.modules.notifications.model.NotificationType;
+import com.fsad.feedback.modules.notifications.service.NotificationService;
 import com.fsad.feedback.modules.users.model.Role;
 import com.fsad.feedback.modules.users.model.User;
 import com.fsad.feedback.modules.users.repository.UserRepository;
@@ -23,17 +25,19 @@ public class CourseService {
 
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
-    public CourseService(CourseRepository courseRepository, UserRepository userRepository) {
+    public CourseService(CourseRepository courseRepository, UserRepository userRepository, NotificationService notificationService) {
         this.courseRepository = courseRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     public List<CoursePayload> list(AuthenticatedUser user) {
         Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
         List<Course> courses = user.role().isAdminLike()
                 ? courseRepository.findByAdminId(user.id(), sort)
-                : courseRepository.findByAssignedStudentIdsContaining(user.id(), sort);
+                : courseRepository.findByAssignedStudentId(user.id());
         return courses.stream().map(this::toPayload).toList();
     }
 
@@ -65,16 +69,25 @@ public class CourseService {
             if (studentId == null || studentId.isBlank()) {
                 continue;
             }
-            User student = userRepository.findById(studentId)
+            String normalizedStudentId = studentId.trim();
+            User student = userRepository.findById(normalizedStudentId)
                     .orElseThrow(() -> new AppException(HttpStatus.BAD_REQUEST, "USER_NOT_FOUND", "Student not found"));
             if (student.getRole() != Role.STUDENT) {
                 throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_STUDENT", "Only student users can be assigned");
             }
-            uniqueIds.add(studentId);
+            uniqueIds.add(normalizedStudentId);
         }
 
         course.setAssignedStudentIds(List.copyOf(uniqueIds));
-        return toPayload(courseRepository.save(course));
+        Course savedCourse = courseRepository.save(course);
+        notificationService.createForUsers(
+                savedCourse.getAssignedStudentIds(),
+                NotificationType.COURSE_ASSIGNED,
+                "New course assigned",
+                savedCourse.getCode() + " - " + savedCourse.getTitle() + " was assigned to you.",
+                "/student/courses"
+        );
+        return toPayload(savedCourse);
     }
 
     public Course requireAccessibleCourse(String courseId, AuthenticatedUser user) {

@@ -1,11 +1,12 @@
-import { Bell, Menu, Moon, Search, Sun } from 'lucide-react';
+import { Menu, Moon, Search, Sun } from 'lucide-react';
 import Input from '../ui/Input';
 import Switch from '../ui/Switch';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../hooks/useAuth';
 import ProfileMenu from './ProfileMenu';
+import NotificationBell from './NotificationBell';
 
-export default function Topbar({ onMenuClick }) {
+export default function Topbar({ onMenuClick, searchQuery = '', onSearchChange, showSearch = false, searchPlaceholder = 'Search this workspace...' }) {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
 
@@ -27,28 +28,27 @@ export default function Topbar({ onMenuClick }) {
           </div>
         </div>
 
-        <div className="flex flex-1 items-center justify-end gap-2">
-          <div className="hidden w-full max-w-md lg:block">
+        <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
+          <div className={`order-last w-full md:order-none md:max-w-md ${showSearch ? 'block' : 'hidden'}`}>
             <label className="sr-only" htmlFor="dashboard-search">
               Search
             </label>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-[var(--text-muted)]" />
-              <Input id="dashboard-search" placeholder="Search courses, forms, instructors..." className="pl-10" />
+              <Input
+                id="dashboard-search"
+                placeholder={searchPlaceholder}
+                value={searchQuery}
+                onChange={(event) => onSearchChange?.(event.target.value)}
+                className="pl-10"
+              />
             </div>
           </div>
           <div className="flex items-center gap-2 rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] px-3 py-2">
             {theme === 'dark' ? <Moon className="h-4 w-4 text-[var(--brand-300)]" /> : <Sun className="h-4 w-4 text-amber-500" />}
             <Switch checked={theme === 'dark'} onChange={toggleTheme} />
           </div>
-          <button
-            type="button"
-            className="relative rounded-xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-2 text-[var(--text-secondary)] transition hover:scale-105 hover:shadow-lg"
-            aria-label="Notifications"
-          >
-            <Bell className="h-4 w-4" />
-            <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[var(--danger-500)]" />
-          </button>
+          <NotificationBell />
           <ProfileMenu name={user?.name} role={user?.role} onLogout={logout} />
         </div>
       </div>

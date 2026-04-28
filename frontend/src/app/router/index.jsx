@@ -12,6 +12,7 @@ import FormsListPage from '../../pages/admin/FormsListPage';
 import FormResponsesPage from '../../pages/admin/FormResponsesPage';
 import AnalyticsPage from '../../pages/admin/AnalyticsPage';
 import ReportExportPage from '../../pages/admin/ReportExportPage';
+import AdminRequestsPage from '../../pages/admin/AdminRequestsPage';
 import StudentOverviewPage from '../../pages/student/StudentOverviewPage';
 import CourseListPage from '../../pages/student/CourseListPage';
 import SubmitFeedbackPage from '../../pages/student/SubmitFeedbackPage';
@@ -57,6 +58,7 @@ export default function AppRouter() {
             <Route path="/profile" element={<AnimatedOutlet><ProfilePage /></AnimatedOutlet>} />
 
             <Route element={<ProtectedRoute allow="admin" />}>
+              <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="/admin/dashboard" element={<AnimatedOutlet><AdminOverviewPage /></AnimatedOutlet>} />
               <Route path="/admin/courses" element={<AnimatedOutlet><CourseManagerPage /></AnimatedOutlet>} />
               <Route path="/admin/forms" element={<AnimatedOutlet><FormsListPage /></AnimatedOutlet>} />
@@ -64,9 +66,11 @@ export default function AppRouter() {
               <Route path="/admin/responses" element={<AnimatedOutlet><FormResponsesPage /></AnimatedOutlet>} />
               <Route path="/admin/analytics" element={<AnimatedOutlet><AnalyticsPage /></AnimatedOutlet>} />
               <Route path="/admin/export" element={<AnimatedOutlet><ReportExportPage /></AnimatedOutlet>} />
+              <Route path="/admin/myadmins" element={<AnimatedOutlet><AdminRequestsPage /></AnimatedOutlet>} />
             </Route>
 
             <Route element={<ProtectedRoute allow="student" />}>
+              <Route path="/student" element={<Navigate to="/student/dashboard" replace />} />
               <Route path="/student/dashboard" element={<AnimatedOutlet><StudentOverviewPage /></AnimatedOutlet>} />
               <Route path="/student/courses" element={<AnimatedOutlet><CourseListPage /></AnimatedOutlet>} />
               <Route path="/student/feedback" element={<AnimatedOutlet><SubmitFeedbackPage /></AnimatedOutlet>} />
