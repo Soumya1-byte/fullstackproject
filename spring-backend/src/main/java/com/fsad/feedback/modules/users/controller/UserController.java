@@ -5,6 +5,7 @@ import com.fsad.feedback.common.api.ApiResponse;
 import com.fsad.feedback.common.security.SecurityUtils;
 import com.fsad.feedback.modules.users.dto.RequestAdminAccessRequest;
 import com.fsad.feedback.modules.users.dto.ReviewAdminAccessRequest;
+import com.fsad.feedback.modules.users.dto.DemoteAdminRequest;
 import com.fsad.feedback.modules.users.dto.UpdateProfileRequest;
 import com.fsad.feedback.modules.users.dto.UserProfilePayload;
 import com.fsad.feedback.modules.users.service.UserService;
@@ -66,5 +67,15 @@ public class UserController {
     ) {
         AuthenticatedUser authenticatedUser = SecurityUtils.requireAuthenticatedUser();
         return ApiResponse.ok(userService.reviewAdminRequest(authenticatedUser.id(), userId, request));
+    }
+
+    @PatchMapping("/admins/{userId}/demote")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER', 'SUPER_ADMIN')")
+    public ApiResponse<UserProfilePayload> demoteAdmin(
+            @PathVariable String userId,
+            @Valid @RequestBody DemoteAdminRequest request
+    ) {
+        AuthenticatedUser authenticatedUser = SecurityUtils.requireAuthenticatedUser();
+        return ApiResponse.ok(userService.demoteAdmin(authenticatedUser.id(), userId, request));
     }
 }

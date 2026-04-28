@@ -142,10 +142,15 @@ public class AuthService {
                 user.getName(),
                 user.getEmail(),
                 user.getRole(),
+                isPrimaryAdminEmail(user.getEmail()),
                 user.getAdminRequestStatus(),
                 user.getAdminRequestRequestedAt(),
                 user.getAdminRequestReviewedAt()
         );
+    }
+
+    private boolean isPrimaryAdminEmail(String email) {
+        return normalizeEmail(email).equals(normalizeEmail(adminAuthProperties.adminLoginEmail()));
     }
 
     private String normalizeEmail(String email) {

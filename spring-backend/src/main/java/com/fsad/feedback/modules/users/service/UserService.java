@@ -2,6 +2,7 @@ package com.fsad.feedback.modules.users.service;
 
 import com.fsad.feedback.common.error.AppException;
 import com.fsad.feedback.modules.auth.config.AdminAuthProperties;
+import com.fsad.feedback.modules.users.dto.DemoteAdminRequest;
 import com.fsad.feedback.modules.users.dto.RequestAdminAccessRequest;
 import com.fsad.feedback.modules.users.dto.ReviewAdminAccessRequest;
 import com.fsad.feedback.modules.users.dto.UpdateProfileRequest;
@@ -137,12 +138,26 @@ public class UserService {
         return toPayload(userRepository.save(user));
     }
 
+    public UserProfilePayload demoteAdmin(String adminId, String userId, DemoteAdminRequest request) {
+        return reviewAdminRequest(
+                adminId,
+                userId,
+                new ReviewAdminAccessRequest(
+                        AdminRequestStatus.DENIED,
+                        request.note() == null || request.note().isBlank()
+                                ? "Admin access removed by primary admin"
+                                : request.note()
+                )
+        );
+    }
+
     private UserProfilePayload toPayload(User user) {
         return new UserProfilePayload(
                 user.getId(),
                 user.getName(),
                 user.getEmail(),
                 user.getRole(),
+                isPrimaryAdminEmail(user.getEmail()),
                 user.getAdminRequestStatus(),
                 user.getAdminRequestMessage(),
                 user.getAdminRequestRequestedAt(),

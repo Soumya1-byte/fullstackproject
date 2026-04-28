@@ -11,6 +11,7 @@ public record UserProfilePayload(
         String name,
         String email,
         Role role,
+        Boolean isPrimaryAdmin,
         AdminRequestStatus adminRequestStatus,
         String adminRequestMessage,
         Instant adminRequestRequestedAt,
