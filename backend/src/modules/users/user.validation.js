@@ -8,3 +8,7 @@ export const reviewAdminAccessSchema = z.object({
   decision: z.enum(['APPROVED', 'DENIED']),
   note: z.string().trim().max(500).optional().default('')
 });
+
+export const demoteAdminSchema = z.object({
+  note: z.string().trim().max(500).optional().default('')
+});

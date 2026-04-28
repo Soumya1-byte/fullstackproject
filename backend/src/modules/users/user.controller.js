@@ -53,5 +53,14 @@ export const userController = {
     } catch (error) {
       next(error);
     }
+  },
+
+  async demoteAdmin(req, res, next) {
+    try {
+      const data = await userService.demoteAdmin(req.user.sub, req.params.userId, req.body);
+      res.json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
   }
 };

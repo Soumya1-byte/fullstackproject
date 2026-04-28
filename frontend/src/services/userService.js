@@ -45,5 +45,10 @@ export const userService = {
   async reviewAdminRequest(userId, payload) {
     const { data } = await apiClient.patch(`/users/admin-requests/${userId}`, payload);
     return normalizeUserPayload(data.data);
+  },
+
+  async demoteAdmin(userId, payload = {}) {
+    const { data } = await apiClient.patch(`/users/admins/${userId}/demote`, payload);
+    return normalizeUserPayload(data.data);
   }
 };

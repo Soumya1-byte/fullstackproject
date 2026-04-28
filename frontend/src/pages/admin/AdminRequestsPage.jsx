@@ -5,8 +5,11 @@ import Button from '../../components/ui/Button';
 import EmptyState from '../../components/ui/EmptyState';
 import SectionCard from '../../components/ui/SectionCard';
 import Textarea from '../../components/ui/Textarea';
+import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { userService } from '../../services/userService';
+
+const PRIMARY_ADMIN_EMAIL = 'soumya.mishra.7812@gmail.com';
 
 function normalizeStatus(value) {
   const normalized = String(value || '').trim().toUpperCase();
@@ -38,7 +41,9 @@ export default function AdminRequestsPage() {
   const [requests, setRequests] = useState([]);
   const [decisionNotes, setDecisionNotes] = useState({});
   const [processingId, setProcessingId] = useState('');
+  const { user } = useAuth();
   const { pushToast } = useToast();
+  const isPrimaryAdmin = user?.email?.toLowerCase() === PRIMARY_ADMIN_EMAIL;
 
   const loadRequests = async () => {
     const data = await userService.listAdminRequests();
@@ -83,6 +88,19 @@ export default function AdminRequestsPage() {
     }
   };
 
+  const onDemote = async (userId) => {
+    setProcessingId(userId);
+    try {
+      await userService.demoteAdmin(userId, { note: decisionNotes[userId] || '' });
+      pushToast('Admin access removed', 'success');
+      await loadRequests();
+    } catch (error) {
+      pushToast(error.response?.data?.error?.message || 'Could not remove admin access', 'error');
+    } finally {
+      setProcessingId('');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <header className="space-y-2">
@@ -119,7 +137,9 @@ export default function AdminRequestsPage() {
               const requestId = request._id || request.id;
               const normalizedStatus = normalizeStatus(request.adminRequestStatus);
               const isPending = normalizedStatus === 'PENDING';
+              const isApprovedAdmin = normalizedStatus === 'APPROVED' && String(request.role || '').toUpperCase() === 'ADMIN';
               const isBusy = processingId === requestId;
+              const canDemote = isPrimaryAdmin && isApprovedAdmin && request.email?.toLowerCase() !== PRIMARY_ADMIN_EMAIL;
 
               return (
                 <div key={requestId} className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-elevated)] p-4">
@@ -150,6 +170,15 @@ export default function AdminRequestsPage() {
                     </div>
                   ) : null}
 
+                  {canDemote ? (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button type="button" variant="secondary" onClick={() => onDemote(requestId)} disabled={isBusy || !requestId}>
+                        <ShieldX className="h-4 w-4" />
+                        {isBusy ? 'Saving...' : 'Remove as Admin'}
+                      </Button>
+                    </div>
+                  ) : null}
+
                   <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
                     <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-card)] p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Student Message</p>
@@ -163,8 +192,8 @@ export default function AdminRequestsPage() {
                         <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Decision Note</span>
                         <Textarea
                           rows={4}
-                          disabled={!isPending || isBusy}
-                          placeholder="Add a short decision note"
+                          disabled={(!isPending && !canDemote) || isBusy}
+                          placeholder={canDemote ? 'Add a short note for removing admin access' : 'Add a short decision note'}
                           value={decisionNotes[requestId] || ''}
                           onChange={(event) => setDecisionNotes((prev) => ({ ...prev, [requestId]: event.target.value }))}
                         />
