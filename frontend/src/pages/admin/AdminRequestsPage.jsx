@@ -11,6 +11,15 @@ import { userService } from '../../services/userService';
 
 const PRIMARY_ADMIN_EMAIL = 'soumya.mishra.7812@gmail.com';
 
+function getErrorMessage(error, fallback) {
+  return (
+    error?.response?.data?.error?.message ||
+    error?.response?.data?.message ||
+    error?.message ||
+    fallback
+  );
+}
+
 function normalizeStatus(value) {
   const normalized = String(value || '').trim().toUpperCase();
   if (normalized === 'APPROVED' || normalized === 'DENIED' || normalized === 'PENDING') {
@@ -82,7 +91,7 @@ export default function AdminRequestsPage() {
       pushToast(`Request ${decision === 'APPROVED' ? 'approved' : 'denied'}`, 'success');
       await loadRequests();
     } catch (error) {
-      pushToast(error.response?.data?.error?.message || 'Could not review request', 'error');
+      pushToast(getErrorMessage(error, 'Could not review request'), 'error');
     } finally {
       setProcessingId('');
     }
@@ -91,11 +100,11 @@ export default function AdminRequestsPage() {
   const onDemote = async (userId) => {
     setProcessingId(userId);
     try {
-      await userService.reviewAdminRequest(userId, { decision: 'DENIED', note: decisionNotes[userId] || 'Admin access removed by primary admin' });
+      await userService.demoteAdmin(userId, { note: decisionNotes[userId] || 'Admin access removed by primary admin' });
       pushToast('Admin access removed', 'success');
       await loadRequests();
     } catch (error) {
-      pushToast(error.response?.data?.error?.message || 'Could not remove admin access', 'error');
+      pushToast(getErrorMessage(error, 'Could not remove admin access'), 'error');
     } finally {
       setProcessingId('');
     }

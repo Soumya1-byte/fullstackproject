@@ -16,6 +16,11 @@ function normalizeUserPayload(user) {
   };
 }
 
+function shouldFallbackDemote(error) {
+  const status = error?.response?.status;
+  return !status || status === 404 || status === 405 || status === 500;
+}
+
 export const userService = {
   async listStudents() {
     const { data } = await apiClient.get('/users/students');
@@ -48,7 +53,20 @@ export const userService = {
   },
 
   async demoteAdmin(userId, payload = {}) {
-    const { data } = await apiClient.patch(`/users/admins/${userId}/demote`, payload);
-    return normalizeUserPayload(data.data);
+    try {
+      const { data } = await apiClient.patch(`/users/admins/${userId}/demote`, payload);
+      return normalizeUserPayload(data.data);
+    } catch (error) {
+      if (!shouldFallbackDemote(error)) {
+        throw error;
+      }
+
+      const fallbackResponse = await apiClient.patch(`/users/admin-requests/${userId}`, {
+        decision: 'DENIED',
+        note: payload.note || 'Admin access removed by primary admin'
+      });
+
+      return normalizeUserPayload(fallbackResponse.data.data);
+    }
   }
 };
